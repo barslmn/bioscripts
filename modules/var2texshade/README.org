@@ -1,0 +1,140 @@
+#+title: Readme
+
+
+#+BEGIN_SRC sh :tangle INSTALL.sh :comments both :shebang "#!/bin/sh"
+# apt install texlive-full
+wget -q -O- https://ftp.ncbi.nih.gov/pub/HomoloGene/current/homologene.data | gzip -c > homologene.data
+#+END_SRC
+
+
+#+BEGIN_SRC sh :tangle var2texshade.sh :comments both :shebang "#!/bin/sh"
+set -o errexit
+set -o nounset
+if [ "${TRACE-0}" = "1" ]; then
+    set -o xtrace
+fi
+
+if [ "${1-}" = "help" ]; then
+    echo 'Usage: ./script.sh arg-one arg-two
+
+This is an awesome bash script to make your life better.
+
+'
+    exit
+fi
+
+cd "$(dirname "$0")"
+
+main() {
+    # $1 is hgvsp NP_003385.2:p.His365Arg
+    PADDING_LEFT=10
+    PADDING_RIGHT=10
+
+    HOMOLOGENEHTML=$(mktemp)
+    MSA=$(mktemp)
+    TEXFILE=$(mktemp)
+    # HOMOLOGENEHTML="test.html"
+    # MSA="test.msa"
+    # TEXFILE="test.tex"
+
+    hgvsp="$1"
+    proteinid=${hgvsp%:*}
+    aachange=${hgvsp##*.}
+    position=$(echo "$aachange" | tr -cd 0-9)
+    startpos=$((position - PADDING_LEFT))
+    endpos=$((position + PADDING_RIGHT))
+
+    homologeneid=$(zcat homologene.data | grep -m1 "$proteinid" | awk '{print $1}')
+    if [ -z "$homologeneid" ];then
+       echo "couldn't find the gene"
+       exit 1
+    fi
+
+    wget -O "$HOMOLOGENEHTML" -q "https://www.ncbi.nlm.nih.gov/homologene/?cmd=Retrieve&dopt=MultipleAlignment&list_uids=$homologeneid"
+    echo "https://www.ncbi.nlm.nih.gov/homologene/?cmd=Retrieve&dopt=MultipleAlignment&list_uids=$homologeneid"
+    grep -B1 '^<a' "$HOMOLOGENEHTML" | sed 's/&nbsp;/ /g;s/<[^>]*>//g;' >"$MSA"
+    NAMES=$(awk -F "</*td>" '/<\/*td>/{print $1}' "$HOMOLOGENEHTML" | tail -n +6 | sed 's/<[^>]*>//g' | paste - - - | awk '{sub("\\.", ". ", $3);printf "\\nameseq{%s}{%s}\n", NR, $3}')
+    export MSA aachange position startpos endpos NAMES
+    echo "ProteinID: $proteinid"
+    echo $homologeneid
+    echo $HOMOLOGENEHTML
+    echo $NAMES
+    echo $position
+    echo $startpos
+    echo $endpos
+    envsubst <template.tex >"$TEXFILE"
+    pdflatex -jobname="$hgvsp" "$TEXFILE"
+    rm "$TEXFILE" "$HOMOLOGENEHTML" "$MSA"
+}
+
+main "$@"
+#+END_SRC
+
+#+BEGIN_SRC latex :tangle template.tex
+% preamble
+\documentclass[]{article}
+\usepackage{texshade}
+\usepackage{inconsolata}
+\usepackage[]{geometry}
+
+% begin document
+\begin{document}
+\begin{texshade}{$MSA}
+\setends{1}{$startpos..$endpos}
+% IDENTITY HIGHLIGHTING
+\shadingmode{similar}
+%\shadingmode[allmatchspecial]{identical}
+\nomatchresidues{Gray70}{White}{upper}{bf}
+%\conservedresidues{Black}{LightCyan}{upper}{bf}
+%\allmatchresidues{White}{Red}{upper}{bf}
+
+% CHEMICAL HIGHLIGHTING
+%\shadingmode[chemical]{functional}
+
+% STRUCTURAL HIGHLIGHTING
+%\shadingmode[structure]{functional}
+
+% HIGHLIGHTING THRESHOLD
+%\threshold[100]{50} % [high]{low}
+
+% CAPTION - textbf{} specifies bold text
+%\showcaption[bottom]{\textbf{Protein MSA with Similarity Highlighting}}
+
+% LEGEND
+\showlegend
+%\movelegend{0cm}{0cm} % {Horizontal}{Vertical} offsets
+
+% TOP NUMBERING
+%\showruler{1}{top}
+%\hidenumbering
+
+% SIDE NUMBERING
+%\shownumbering
+
+% CONSENSUS
+%\hideconsensus
+
+% FINGERPRINTING
+%\fingerprint{200}
+\namesrm\namessl
+$NAMES
+
+% SEQUENCE LOGO
+\showsequencelogo{top}
+%\showlogoscale{leftright}
+%\dofrequencycorrection
+\featureslarge
+
+\feature{bottom}{1}{$position..$position}{fill:$\uparrow$}{$aachange}
+\frameblock{1}{$position..$position}{Red[1pt]}
+% TEXT SIZE (see README)
+%\namesfootnotesize
+%\residuesfootnotesize
+%\legendfootnotesize
+%\numberingtiny
+
+
+% end document
+\end{texshade}
+\end{document}
+#+END_SRC

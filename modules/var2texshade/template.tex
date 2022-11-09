@@ -1,0 +1,66 @@
+% preamble
+\documentclass[]{article}
+\usepackage{texshade}
+\usepackage{inconsolata}
+\usepackage[]{geometry}
+
+% begin document
+\begin{document}
+\begin{texshade}{$MSA}
+\setends{1}{$startpos..$endpos}
+% IDENTITY HIGHLIGHTING
+\shadingmode{similar}
+%\shadingmode[allmatchspecial]{identical}
+\nomatchresidues{Gray70}{White}{upper}{bf}
+%\conservedresidues{Black}{LightCyan}{upper}{bf}
+%\allmatchresidues{White}{Red}{upper}{bf}
+
+% CHEMICAL HIGHLIGHTING
+%\shadingmode[chemical]{functional}
+
+% STRUCTURAL HIGHLIGHTING
+%\shadingmode[structure]{functional}
+
+% HIGHLIGHTING THRESHOLD
+%\threshold[100]{50} % [high]{low}
+
+% CAPTION - textbf{} specifies bold text
+%\showcaption[bottom]{\textbf{Protein MSA with Similarity Highlighting}}
+
+% LEGEND
+\showlegend
+%\movelegend{0cm}{0cm} % {Horizontal}{Vertical} offsets
+
+% TOP NUMBERING
+%\showruler{1}{top}
+%\hidenumbering
+
+% SIDE NUMBERING
+%\shownumbering
+
+% CONSENSUS
+%\hideconsensus
+
+% FINGERPRINTING
+%\fingerprint{200}
+\namesrm\namessl
+$NAMES
+
+% SEQUENCE LOGO
+\showsequencelogo{top}
+%\showlogoscale{leftright}
+%\dofrequencycorrection
+\featureslarge
+
+\feature{bottom}{1}{$position..$position}{fill:$\uparrow$}{$aachange}
+\frameblock{1}{$position..$position}{Red[1pt]}
+% TEXT SIZE (see README)
+%\namesfootnotesize
+%\residuesfootnotesize
+%\legendfootnotesize
+%\numberingtiny
+
+
+% end document
+\end{texshade}
+\end{document}
