@@ -28,7 +28,15 @@ main() {
 
     hgvsp="$1"
     proteinid=${hgvsp%:*}
+    if [ "$proteinid" = "$hgvsp" ];then
+      echo "couldn't parse the protein id"
+      exit 1
+    fi
     aachange=${hgvsp##*.}
+    if [ "$aachange" = "$hgvsp" ];then
+      echo "couldn't parse the aachange"
+      exit 1
+    fi
     position=$(echo "$aachange" | tr -cd 0-9)
     startpos=$((position - PADDING_LEFT))
     endpos=$((position + PADDING_RIGHT))
@@ -38,14 +46,13 @@ main() {
         echo "couldn't find the gene"
         exit 1
     fi
-
+    
     wget -O "$HOMOLOGENEHTML" -q "https://www.ncbi.nlm.nih.gov/homologene/?cmd=Retrieve&dopt=MultipleAlignment&list_uids=$homologeneid"
-    echo "https://www.ncbi.nlm.nih.gov/homologene/?cmd=Retrieve&dopt=MultipleAlignment&list_uids=$homologeneid"
     grep -B1 '^<a' "$HOMOLOGENEHTML" | sed 's/&nbsp;/ /g;s/<[^>]*>//g;' >"$MSA"
     NAMES=$(awk -F "</*td>" '/<\/*td>/{print $1}' "$HOMOLOGENEHTML" | tail -n +6 | sed 's/<[^>]*>//g' | paste - - - | awk '{sub("\\.", ". ", $3);printf "\\nameseq{%s}{%s}\n", NR, $3}')
     export MSA aachange position startpos endpos NAMES
     envsubst <template.tex >"$TEXFILE"
-    pdflatex -jobname="$hgvsp" "$TEXFILE"
+    pdflatex -halt-on-error -jobname="$hgvsp" "$TEXFILE"
     rm "$TEXFILE" "$HOMOLOGENEHTML" "$MSA"
 }
 
