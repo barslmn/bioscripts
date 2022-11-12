@@ -48,15 +48,12 @@ main() {
         exit 1
     fi
 
-    >&2 echo "hi0"
     wget -q -O "$HOMOLOGENEHTML" "https://www.ncbi.nlm.nih.gov/homologene/?cmd=Retrieve&dopt=MultipleAlignment&list_uids=$homologeneid"
     grep -B1 '^<a' "$HOMOLOGENEHTML" | sed 's/&nbsp;/ /g;s/<[^>]*>//g;' >"$MSA"
-    >&2 echo "hi1"
     NAMES=$(awk -F "</*td>" '/<\/*td>/{print $1}' "$HOMOLOGENEHTML" | tail -n +6 | sed 's/<[^>]*>//g' | paste - - - | awk '{sub("\\.", ". ", $3);printf "\\nameseq{%s}{%s}\n", NR, $3}')
     export MSA aachange position startpos endpos NAMES
     envsubst <template.tex >"$TEXFILE"
     pdflatex -halt-on-error -output-directory="$TMPDIR" -jobname="$hgvsp" "$TEXFILE" >/dev/null
-    >&2 echo "hi2"
     echo "$TMPDIR/$hgvsp.pdf"
 
     nohup sh -c 'sleep 10 && rm -rf "$TMPDIR"' &
